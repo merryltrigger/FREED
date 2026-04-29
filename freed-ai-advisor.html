@@ -1,0 +1,701 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>FREED AI — Credit Advisor</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Sora:wght@300;400;500;600;700&family=Inter:wght@400;500&display=swap');
+
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --freed-green: #00C48C;
+    --freed-green-dark: #00A876;
+    --freed-green-light: #E6FBF5;
+    --freed-navy: #0A1628;
+    --freed-navy-mid: #112240;
+    --freed-slate: #1E3A5F;
+    --freed-muted: #8892A4;
+    --freed-border: rgba(255,255,255,0.08);
+    --freed-surface: rgba(255,255,255,0.04);
+    --freed-surface-2: rgba(255,255,255,0.07);
+    --freed-text: #E8EDF5;
+    --freed-text-muted: #8892A4;
+    --freed-card-bg: #0F1E35;
+    --radius: 14px;
+    --radius-sm: 8px;
+  }
+
+  html, body {
+    height: 100%;
+    background: var(--freed-navy);
+    font-family: 'Inter', sans-serif;
+    color: var(--freed-text);
+    overflow: hidden;
+  }
+
+  /* ── Layout ── */
+  .shell {
+    display: flex;
+    flex-direction: column;
+    height: 100vh;
+    max-width: 760px;
+    margin: 0 auto;
+    position: relative;
+  }
+
+  /* ── Ambient background ── */
+  body::before {
+    content: '';
+    position: fixed;
+    top: -200px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 700px;
+    height: 500px;
+    background: radial-gradient(ellipse, rgba(0,196,140,0.12) 0%, transparent 70%);
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  /* ── Header ── */
+  .header {
+    padding: 18px 24px 16px;
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    border-bottom: 1px solid var(--freed-border);
+    background: rgba(10,22,40,0.95);
+    backdrop-filter: blur(12px);
+    position: relative;
+    z-index: 10;
+    flex-shrink: 0;
+  }
+
+  .logo-mark {
+    width: 38px;
+    height: 38px;
+    background: linear-gradient(135deg, #00C48C, #00A876);
+    border-radius: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    box-shadow: 0 0 20px rgba(0,196,140,0.3);
+  }
+
+  .logo-mark svg { width: 20px; height: 20px; color: white; }
+
+  .brand { flex: 1; }
+  .brand-name {
+    font-family: 'Sora', sans-serif;
+    font-size: 18px;
+    font-weight: 700;
+    letter-spacing: -0.3px;
+    color: white;
+  }
+  .brand-name span { color: var(--freed-green); }
+  .brand-sub {
+    font-size: 11.5px;
+    color: var(--freed-text-muted);
+    margin-top: 1px;
+    letter-spacing: 0.2px;
+  }
+
+  .status-pill {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 5px 12px;
+    background: rgba(0,196,140,0.1);
+    border: 1px solid rgba(0,196,140,0.2);
+    border-radius: 20px;
+    font-size: 11.5px;
+    color: var(--freed-green);
+    font-weight: 500;
+  }
+  .status-dot {
+    width: 6px; height: 6px;
+    background: var(--freed-green);
+    border-radius: 50%;
+    animation: pulse 2s infinite;
+  }
+  @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.4} }
+
+  /* ── Messages ── */
+  .messages {
+    flex: 1;
+    overflow-y: auto;
+    padding: 24px 20px;
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+    position: relative;
+    z-index: 1;
+  }
+
+  .messages::-webkit-scrollbar { width: 4px; }
+  .messages::-webkit-scrollbar-track { background: transparent; }
+  .messages::-webkit-scrollbar-thumb { background: var(--freed-border); border-radius: 2px; }
+
+  .msg { display: flex; gap: 10px; max-width: 86%; animation: fadeUp 0.25s ease; }
+  @keyframes fadeUp { from{opacity:0;transform:translateY(8px)} to{opacity:1;transform:translateY(0)} }
+  .msg.bot { align-self: flex-start; }
+  .msg.user { align-self: flex-end; flex-direction: row-reverse; }
+
+  .av {
+    width: 30px; height: 30px;
+    border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 11px; font-weight: 600;
+    flex-shrink: 0;
+    margin-top: 2px;
+  }
+  .av.bot {
+    background: linear-gradient(135deg, #00C48C, #00A876);
+    color: white;
+    box-shadow: 0 0 12px rgba(0,196,140,0.25);
+  }
+  .av.user {
+    background: var(--freed-surface-2);
+    border: 1px solid var(--freed-border);
+    color: var(--freed-text-muted);
+  }
+
+  .bubble {
+    padding: 12px 16px;
+    border-radius: 16px;
+    font-size: 14px;
+    line-height: 1.65;
+  }
+  .msg.bot .bubble {
+    background: var(--freed-card-bg);
+    border: 1px solid var(--freed-border);
+    border-radius: 4px 16px 16px 16px;
+    color: var(--freed-text);
+  }
+  .msg.user .bubble {
+    background: linear-gradient(135deg, rgba(0,196,140,0.18), rgba(0,168,118,0.12));
+    border: 1px solid rgba(0,196,140,0.25);
+    border-radius: 16px 4px 16px 16px;
+    color: var(--freed-text);
+  }
+
+  /* ── Typing ── */
+  .typing-wrap { display: flex; gap: 5px; align-items: center; padding: 4px 2px; }
+  .typing-wrap span {
+    width: 7px; height: 7px;
+    background: var(--freed-green);
+    border-radius: 50%;
+    opacity: 0.4;
+    animation: blink 1.3s infinite;
+  }
+  .typing-wrap span:nth-child(2){animation-delay:0.2s}
+  .typing-wrap span:nth-child(3){animation-delay:0.4s}
+  @keyframes blink{0%,60%,100%{opacity:0.3;transform:scale(0.8)}30%{opacity:1;transform:scale(1)}}
+
+  /* ── Chips ── */
+  .chips { display: flex; gap: 7px; flex-wrap: wrap; margin-top: 12px; }
+  .chip {
+    padding: 6px 13px;
+    border: 1px solid rgba(0,196,140,0.25);
+    border-radius: 20px;
+    font-size: 12.5px;
+    color: var(--freed-green);
+    cursor: pointer;
+    background: rgba(0,196,140,0.06);
+    transition: all 0.15s;
+    font-family: 'Inter', sans-serif;
+  }
+  .chip:hover { background: rgba(0,196,140,0.15); border-color: var(--freed-green); }
+
+  /* ── Metrics ── */
+  .metrics-row { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 12px; }
+  .metric-card {
+    background: rgba(0,196,140,0.07);
+    border: 1px solid rgba(0,196,140,0.15);
+    border-radius: var(--radius-sm);
+    padding: 9px 13px;
+    min-width: 90px;
+  }
+  .metric-label { font-size: 10.5px; color: var(--freed-text-muted); text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 4px; }
+  .metric-val { font-size: 15px; font-weight: 600; font-family: 'Sora', sans-serif; color: white; }
+
+  .score-badge {
+    display: inline-block;
+    padding: 3px 10px;
+    border-radius: 12px;
+    font-size: 12px;
+    font-weight: 600;
+  }
+  .s-poor   { background:#3D1515; color:#F87171; }
+  .s-fair   { background:#3D2A06; color:#FBB041; }
+  .s-good   { background:#0D3022; color:#34D399; }
+  .s-great  { background:#0D2C3D; color:#38BDF8; }
+
+  /* ── Product cards ── */
+  .product-card {
+    margin-top: 14px;
+    border-radius: var(--radius);
+    overflow: hidden;
+    border: 1px solid;
+  }
+  .product-card.consolidation { border-color: rgba(0,196,140,0.3); }
+  .product-card.relief { border-color: rgba(99,102,241,0.3); }
+
+  .product-header {
+    padding: 12px 16px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-size: 14px;
+    font-weight: 600;
+    font-family: 'Sora', sans-serif;
+  }
+  .product-card.consolidation .product-header { background: rgba(0,196,140,0.12); color: var(--freed-green); }
+  .product-card.relief .product-header { background: rgba(99,102,241,0.12); color: #A5B4FC; }
+
+  .product-icon {
+    width: 32px; height: 32px;
+    border-radius: 8px;
+    display: flex; align-items: center; justify-content: center;
+    flex-shrink: 0;
+  }
+  .consolidation .product-icon { background: rgba(0,196,140,0.2); }
+  .relief .product-icon { background: rgba(99,102,241,0.2); }
+
+  .product-body {
+    padding: 14px 16px;
+    font-size: 13px;
+    color: var(--freed-text-muted);
+    line-height: 1.7;
+    background: var(--freed-card-bg);
+  }
+  .product-body strong { color: var(--freed-text); font-weight: 500; }
+
+  .product-cta {
+    display: inline-block;
+    margin-top: 12px;
+    padding: 9px 20px;
+    border-radius: 24px;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    border: none;
+    font-family: 'Inter', sans-serif;
+    transition: transform 0.15s, box-shadow 0.15s;
+    letter-spacing: 0.1px;
+  }
+  .product-cta:hover { transform: translateY(-1px); }
+  .consolidation .product-cta { background: linear-gradient(135deg, #00C48C, #00A876); color: white; box-shadow: 0 4px 16px rgba(0,196,140,0.3); }
+  .relief .product-cta { background: linear-gradient(135deg, #6366F1, #4F46E5); color: white; box-shadow: 0 4px 16px rgba(99,102,241,0.3); }
+
+  .product-badges { display: flex; gap: 6px; flex-wrap: wrap; margin: 10px 0 4px; }
+  .badge {
+    padding: 3px 9px;
+    border-radius: 12px;
+    font-size: 11px;
+    font-weight: 500;
+  }
+  .consolidation .badge { background: rgba(0,196,140,0.12); color: var(--freed-green); }
+  .relief .badge { background: rgba(99,102,241,0.12); color: #A5B4FC; }
+
+  /* ── Input area ── */
+  .input-area {
+    padding: 14px 18px 18px;
+    border-top: 1px solid var(--freed-border);
+    background: rgba(10,22,40,0.95);
+    backdrop-filter: blur(12px);
+    position: relative;
+    z-index: 10;
+    flex-shrink: 0;
+  }
+
+  .upload-zone {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 9px 14px;
+    border: 1px dashed rgba(0,196,140,0.25);
+    border-radius: var(--radius-sm);
+    cursor: pointer;
+    margin-bottom: 11px;
+    transition: all 0.15s;
+    background: rgba(0,196,140,0.03);
+  }
+  .upload-zone:hover { background: rgba(0,196,140,0.07); border-color: rgba(0,196,140,0.4); }
+  .upload-zone.has-file { border-style: solid; border-color: rgba(0,196,140,0.4); background: rgba(0,196,140,0.08); }
+
+  .upload-icon { width: 18px; height: 18px; color: var(--freed-green); flex-shrink: 0; }
+  .upload-text { font-size: 12.5px; color: var(--freed-text-muted); }
+  .upload-text.active { color: var(--freed-green); font-weight: 500; }
+
+  .input-row { display: flex; gap: 8px; align-items: flex-end; }
+
+  .msg-input {
+    flex: 1;
+    padding: 11px 16px;
+    background: var(--freed-surface-2);
+    border: 1px solid var(--freed-border);
+    border-radius: 24px;
+    color: var(--freed-text);
+    font-size: 14px;
+    font-family: 'Inter', sans-serif;
+    outline: none;
+    transition: border-color 0.15s;
+    resize: none;
+    max-height: 100px;
+    line-height: 1.5;
+  }
+  .msg-input::placeholder { color: var(--freed-text-muted); }
+  .msg-input:focus { border-color: rgba(0,196,140,0.4); background: rgba(255,255,255,0.06); }
+
+  .send-btn {
+    width: 42px; height: 42px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, #00C48C, #00A876);
+    border: none;
+    cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+    flex-shrink: 0;
+    transition: transform 0.15s, box-shadow 0.15s, opacity 0.15s;
+    box-shadow: 0 4px 14px rgba(0,196,140,0.35);
+  }
+  .send-btn:hover { transform: scale(1.05); box-shadow: 0 6px 18px rgba(0,196,140,0.45); }
+  .send-btn:disabled { opacity: 0.35; transform: none; box-shadow: none; cursor: default; }
+  .send-btn svg { width: 17px; height: 17px; color: white; }
+
+  #file-input { display: none; }
+
+  /* ── PDF progress ── */
+  .pdf-progress {
+    background: rgba(0,196,140,0.1);
+    border: 1px solid rgba(0,196,140,0.2);
+    border-radius: var(--radius-sm);
+    padding: 10px 14px;
+    font-size: 12.5px;
+    color: var(--freed-green);
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .progress-bar-wrap { flex: 1; height: 3px; background: rgba(0,196,140,0.15); border-radius: 2px; overflow: hidden; }
+  .progress-bar { height: 100%; background: var(--freed-green); border-radius: 2px; transition: width 0.3s; }
+
+  /* ── Divider ── */
+  .section-divider {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-size: 11px;
+    color: var(--freed-text-muted);
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    margin: 4px 0;
+  }
+  .section-divider::before, .section-divider::after {
+    content: ''; flex: 1;
+    height: 1px;
+    background: var(--freed-border);
+  }
+
+  /* ── Disclaimer ── */
+  .disclaimer {
+    text-align: center;
+    font-size: 10.5px;
+    color: var(--freed-text-muted);
+    margin-top: 8px;
+    opacity: 0.6;
+  }
+</style>
+</head>
+<body>
+<div class="shell">
+
+  <div class="header">
+    <div class="logo-mark">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
+        <path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/>
+      </svg>
+    </div>
+    <div class="brand">
+      <div class="brand-name">FREED <span>AI</span></div>
+      <div class="brand-sub">Credit Intelligence &amp; Debt Advisory</div>
+    </div>
+    <div class="status-pill"><div class="status-dot"></div>Live</div>
+  </div>
+
+  <div class="messages" id="msgs"></div>
+
+  <div class="input-area">
+    <div class="upload-zone" id="upload-zone" onclick="document.getElementById('file-input').click()">
+      <svg class="upload-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <path d="M15.172 7l-6.586 6.586a2 2 0 102.828 2.828l6.414-6.586a4 4 0 00-5.656-5.656l-6.415 6.585a6 6 0 108.486 8.486L20.5 13"/>
+      </svg>
+      <span class="upload-text" id="upload-label">Attach credit report — PDF, TXT or CSV</span>
+    </div>
+    <input type="file" id="file-input" accept=".pdf,.txt,.csv" onchange="handleFile(this)">
+    <div class="input-row">
+      <input class="msg-input" id="inp" type="text" placeholder="Ask about your credit score, debts, or eligibility..." onkeydown="if(event.key==='Enter')sendMsg()">
+      <button class="send-btn" id="send-btn" onclick="sendMsg()">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+          <path d="M22 2L11 13M22 2l-7 20-4-9-9-4 20-7z"/>
+        </svg>
+      </button>
+    </div>
+    <div class="disclaimer">FREED AI is for informational purposes only. Not financial advice.</div>
+  </div>
+
+</div>
+
+<script>
+// PDF.js worker
+pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+
+const msgsEl = document.getElementById('msgs');
+const inp = document.getElementById('inp');
+const sendBtn = document.getElementById('send-btn');
+let history = [];
+let reportContent = null;
+let reportAttached = false;
+let busy = false;
+
+const SYSTEM = `You are FREED AI — an expert credit advisor for an Indian fintech debt resolution company called FREED. Your role is to:
+
+1. Analyse credit reports when provided (CIBIL, Experian, CRIF format)
+2. Ask targeted follow-up questions to understand the user's credit profile when no report is uploaded
+3. Extract and identify: Credit Score, Days Past Due (DPD) on any account, FOIR (Fixed Obligation to Income Ratio), employment type (salaried/self-employed/business), total debt burden, number of active loans
+4. Provide 3-5 specific, actionable recommendations to improve the credit score
+5. Recommend the right FREED product using this EXACT logic:
+   - DEBT CONSOLIDATION: ONLY IF all three conditions met: (a) zero DPD on all accounts, (b) FOIR above 50%, (c) salaried employee
+   - DEBT RELIEF: for everyone else with debt stress — high DPD, self-employed, FOIR high, multiple defaults, settled accounts
+
+Always respond warmly and clearly. Use Indian financial context (₹, lakhs, CIBIL, SBI, HDFC etc). When a credit report is shared, immediately extract and summarise key metrics.
+
+TAGS — always include these when you have the data (include in your response text):
+[PRODUCT:CONSOLIDATION] or [PRODUCT:RELIEF] when recommending a product
+[SCORE:NNN] for credit score number
+[DPD:yes] or [DPD:no] for whether any overdue exists
+[FOIR:NN] for FOIR percentage (number only)
+
+Tone: Direct, empathetic, expert. You work for FREED — a company dedicated to helping Indians get debt-free.`;
+
+function scroll() { setTimeout(() => msgsEl.scrollTop = msgsEl.scrollHeight, 60); }
+
+function addMsg(role, html, raw=false) {
+  const wrap = document.createElement('div');
+  wrap.className = `msg ${role}`;
+  const av = document.createElement('div');
+  av.className = `av ${role}`;
+  av.textContent = role === 'bot' ? 'F' : 'You';
+  const bub = document.createElement('div');
+  bub.className = 'bubble';
+  if(raw) bub.innerHTML = html; else bub.textContent = html;
+  wrap.appendChild(av);
+  wrap.appendChild(bub);
+  msgsEl.appendChild(wrap);
+  scroll();
+  return bub;
+}
+
+function showTyping() {
+  const wrap = document.createElement('div');
+  wrap.className = 'msg bot'; wrap.id = 'typing';
+  wrap.innerHTML = '<div class="av bot">F</div><div class="bubble"><div class="typing-wrap"><span></span><span></span><span></span></div></div>';
+  msgsEl.appendChild(wrap); scroll();
+}
+function removeTyping() { const t=document.getElementById('typing'); if(t)t.remove(); }
+
+function scoreClass(s) {
+  if(s<600)return's-poor'; if(s<700)return's-fair'; if(s<750)return's-good'; return's-great';
+}
+function scoreLabel(s) {
+  if(s<600)return'Poor'; if(s<700)return'Fair'; if(s<750)return'Good'; return'Excellent';
+}
+
+function render(text) {
+  let html = text;
+  let product=null, score=null, dpd=null, foir=null;
+
+  const pm=html.match(/\[PRODUCT:(CONSOLIDATION|RELIEF)\]/i);
+  if(pm){product=pm[1].toUpperCase();html=html.replace(pm[0],'');}
+  const sm=html.match(/\[SCORE:(\d+)\]/i);
+  if(sm){score=parseInt(sm[1]);html=html.replace(sm[0],'');}
+  const dm=html.match(/\[DPD:(yes|no)\]/i);
+  if(dm){dpd=dm[1].toLowerCase();html=html.replace(dm[0],'');}
+  const fm=html.match(/\[FOIR:(\d+\.?\d*)\]/i);
+  if(fm){foir=parseFloat(fm[1]);html=html.replace(fm[0],'');}
+
+  let out = '<div style="white-space:pre-wrap">' + html.trim().replace(/\*\*(.*?)\*\*/g,'<strong>$1</strong>') + '</div>';
+
+  if(score||dpd!==null||foir) {
+    out += '<div class="metrics-row">';
+    if(score) out+=`<div class="metric-card"><div class="metric-label">Credit Score</div><div class="metric-val"><span class="score-badge ${scoreClass(score)}">${score} ${scoreLabel(score)}</span></div></div>`;
+    if(dpd!==null) out+=`<div class="metric-card"><div class="metric-label">Overdue (DPD)</div><div class="metric-val" style="color:${dpd==='yes'?'#F87171':'#34D399'}">${dpd==='yes'?'Yes — Overdue':'No Overdue'}</div></div>`;
+    if(foir) out+=`<div class="metric-card"><div class="metric-label">FOIR</div><div class="metric-val">${Math.round(foir)}%</div></div>`;
+    out += '</div>';
+  }
+
+  if(product==='CONSOLIDATION') {
+    out += `<div class="product-card consolidation">
+      <div class="product-header">
+        <div class="product-icon">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+        </div>
+        Debt Consolidation Loan
+      </div>
+      <div class="product-body">
+        You qualify for FREED's <strong>Debt Consolidation Loan</strong> — merge all your EMIs into a single lower monthly payment, reduce your total interest outgo, and simplify your financial life.
+        <div class="product-badges">
+          <span class="badge">Zero DPD ✓</span>
+          <span class="badge">Salaried ✓</span>
+          <span class="badge">FOIR &gt;50% ✓</span>
+        </div>
+        <button class="product-cta" onclick="sendChip('I want to apply for the FREED Debt Consolidation Loan. What are the next steps?')">Apply with FREED →</button>
+      </div>
+    </div>`;
+  } else if(product==='RELIEF') {
+    out += `<div class="product-card relief">
+      <div class="product-header">
+        <div class="product-icon">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 8v4l3 3"/></svg>
+        </div>
+        FREED Debt Relief Programme
+      </div>
+      <div class="product-body">
+        FREED's <strong>Debt Relief Programme</strong> is designed for your situation. Our experts negotiate directly with lenders, create a structured repayment roadmap, and work to get you debt-free — typically within 12–48 months.
+        <div class="product-badges">
+          <span class="badge">Lender Negotiation</span>
+          <span class="badge">Structured Plan</span>
+          <span class="badge">Expert Guidance</span>
+        </div>
+        <button class="product-cta" onclick="sendChip('Tell me how the FREED Debt Relief Programme works and how to enrol')">Talk to a FREED Advisor →</button>
+      </div>
+    </div>`;
+  }
+
+  return out;
+}
+
+async function callAPI(msg) {
+  const ctx = reportContent
+    ? `[CREDIT REPORT UPLOADED]\n\n${reportContent}\n\n---\nUser message: ${msg}`
+    : msg;
+
+  history.push({role:'user',content:ctx});
+
+  const res = await fetch('https://api.anthropic.com/v1/messages',{
+    method:'POST',
+    headers:{'Content-Type':'application/json'},
+    body:JSON.stringify({
+      model:'claude-sonnet-4-20250514',
+      max_tokens:1200,
+      system:SYSTEM,
+      messages:history
+    })
+  });
+  const data = await res.json();
+  const reply = data.content?.[0]?.text || "I'm having trouble processing that. Please try again.";
+  history.push({role:'assistant',content:reply});
+  return reply;
+}
+
+async function sendMsg() {
+  const text = inp.value.trim();
+  if(!text||busy)return;
+  inp.value='';
+  addMsg('user',text);
+  busy=true; sendBtn.disabled=true;
+  showTyping();
+  try {
+    const reply = await callAPI(text);
+    removeTyping();
+    addMsg('bot', render(reply), true);
+  } catch(e) {
+    removeTyping();
+    addMsg('bot','Connection issue — please try again.',false);
+  }
+  busy=false; sendBtn.disabled=false;
+}
+
+function sendChip(text) { inp.value=text; sendMsg(); }
+
+/* ── PDF extraction ── */
+async function extractPDF(file) {
+  const arrayBuffer = await file.arrayBuffer();
+  const pdf = await pdfjsLib.getDocument({data:arrayBuffer}).promise;
+  let text = '';
+  const maxPages = Math.min(pdf.numPages, 15);
+  for(let i=1;i<=maxPages;i++){
+    const page = await pdf.getPage(i);
+    const content = await page.getTextContent();
+    text += content.items.map(s=>s.str).join(' ') + '\n';
+  }
+  return text.substring(0,10000);
+}
+
+function showPDFProgress(filename, pct) {
+  const zone = document.getElementById('upload-zone');
+  zone.innerHTML = `<div class="pdf-progress" style="width:100%">
+    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14,2 14,8 20,8"/></svg>
+    <span>Reading ${filename}…</span>
+    <div class="progress-bar-wrap"><div class="progress-bar" style="width:${pct}%"></div></div>
+    <span>${pct}%</span>
+  </div>`;
+}
+
+async function handleFile(input) {
+  const file = input.files[0];
+  if(!file) return;
+  const zone = document.getElementById('upload-zone');
+  const label = document.getElementById('upload-label');
+
+  if(file.type === 'application/pdf' || file.name.endsWith('.pdf')) {
+    showPDFProgress(file.name, 20);
+    try {
+      setTimeout(()=>showPDFProgress(file.name,55),300);
+      const text = await extractPDF(file);
+      showPDFProgress(file.name,100);
+      setTimeout(()=>{
+        zone.className = 'upload-zone has-file';
+        zone.innerHTML = `<svg class="upload-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14,2 14,8 20,8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10,9 9,9 8,9"/></svg>
+        <span class="upload-text active">${file.name} — ${Math.ceil(text.length/100)/10}k characters extracted</span>`;
+        reportContent = text;
+        addMsg('bot', `<strong>${file.name}</strong> uploaded and parsed successfully. Analysing your credit report now…`, true);
+        sendChip('Please analyse my credit report in detail — give me my credit score, key risk factors, and your honest assessment.');
+      },400);
+    } catch(e) {
+      zone.className='upload-zone';
+      zone.innerHTML=`<svg class="upload-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M15.172 7l-6.586 6.586a2 2 0 102.828 2.828l6.414-6.586a4 4 0 00-5.656-5.656l-6.415 6.585a6 6 0 108.486 8.486L20.5 13"/></svg>
+      <span class="upload-text">Could not read PDF — try a text version instead</span>`;
+    }
+  } else {
+    const reader = new FileReader();
+    reader.onload = e => {
+      reportContent = e.target.result.substring(0,10000);
+      zone.className = 'upload-zone has-file';
+      zone.innerHTML = `<svg class="upload-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/></svg>
+      <span class="upload-text active">${file.name} attached</span>`;
+      addMsg('bot', `<strong>${file.name}</strong> received. Analysing…`, true);
+      sendChip('Please analyse my credit report in detail — give me my credit score, key risk factors, and your honest assessment.');
+    };
+    reader.readAsText(file);
+  }
+}
+
+/* ── Boot message ── */
+window.addEventListener('load',()=>{
+  addMsg('bot',`<div>Welcome to <strong>FREED AI</strong> — your personal credit &amp; debt advisor.</div>
+  <div style="margin-top:8px;color:#8892A4;font-size:13px">I can analyse your credit report, identify score improvement areas, and recommend the right FREED product for your situation.</div>
+  <div class="chips">
+    <span class="chip" onclick="sendChip('My CIBIL score is around 620 and I have missed some EMI payments')">I have missed EMIs</span>
+    <span class="chip" onclick="sendChip('I am a salaried employee with multiple loans and FOIR above 55%')">High FOIR, salaried</span>
+    <span class="chip" onclick="sendChip('How can I improve my credit score from 650 to 750?')">Improve my score</span>
+    <span class="chip" onclick="sendChip('Do I qualify for debt consolidation?')">Check eligibility</span>
+  </div>`, true);
+});
+</script>
+</body>
+</html>
